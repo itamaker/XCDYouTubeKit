@@ -1,8 +1,11 @@
 //
-//  Copyright (c) 2013-2014 Cédric Luthi. All rights reserved.
+//  Copyright (c) 2013-2016 Cédric Luthi. All rights reserved.
 //
 
 #import "PlayerEventLogger.h"
+
+#import <CocoaLumberjack/CocoaLumberjack.h>
+@import MediaPlayer;
 
 @implementation PlayerEventLogger
 
@@ -26,7 +29,6 @@
 	NSNotificationCenter *defaultCenter = [NSNotificationCenter defaultCenter];
 	if (enabled)
 	{
-		[defaultCenter addObserver:self selector:@selector(videoPlayerViewControllerDidReceiveVideo:) name:XCDYouTubeVideoPlayerViewControllerDidReceiveVideoNotification object:nil];
 		[defaultCenter addObserver:self selector:@selector(moviePlayerPlaybackDidFinish:) name:MPMoviePlayerPlaybackDidFinishNotification object:nil];
 		[defaultCenter addObserver:self selector:@selector(moviePlayerPlaybackStateDidChange:) name:MPMoviePlayerPlaybackStateDidChangeNotification object:nil];
 		[defaultCenter addObserver:self selector:@selector(moviePlayerLoadStateDidChange:) name:MPMoviePlayerLoadStateDidChangeNotification object:nil];
@@ -34,7 +36,6 @@
 	}
 	else
 	{
-		[defaultCenter removeObserver:self name:XCDYouTubeVideoPlayerViewControllerDidReceiveVideoNotification object:nil];
 		[defaultCenter removeObserver:self name:MPMoviePlayerPlaybackDidFinishNotification object:nil];
 		[defaultCenter removeObserver:self name:MPMoviePlayerPlaybackStateDidChangeNotification object:nil];
 		[defaultCenter removeObserver:self name:MPMoviePlayerLoadStateDidChangeNotification object:nil];
@@ -45,7 +46,6 @@
 - (void) moviePlayerPlaybackDidFinish:(NSNotification *)notification
 {
 	MPMovieFinishReason finishReason = [notification.userInfo[MPMoviePlayerPlaybackDidFinishReasonUserInfoKey] integerValue];
-	NSError *error = notification.userInfo[XCDMoviePlayerPlaybackDidFinishErrorUserInfoKey];
 	NSString *reason = @"Unknown";
 	switch (finishReason)
 	{
@@ -59,7 +59,7 @@
 			reason = @"User Exited";
 			break;
 	}
-	NSLog(@"Finish Reason: %@%@", reason, error ? [@"\n" stringByAppendingString:[error description]] : @"");
+	DDLogInfo(@"Finish Reason: %@", reason);
 }
 
 - (void) moviePlayerPlaybackStateDidChange:(NSNotification *)notification
@@ -87,7 +87,7 @@
 			playbackState = @"Seeking Backward";
 			break;
 	}
-	NSLog(@"Playback State: %@", playbackState);
+	DDLogInfo(@"Playback State: %@", playbackState);
 }
 
 - (void) moviePlayerLoadStateDidChange:(NSNotification *)notification
@@ -103,18 +103,13 @@
 	if (state & MPMovieLoadStateStalled)
 		[loadState appendString:@" | Stalled"];
 	
-	NSLog(@"Load State: %@", loadState.length > 0 ? [loadState substringFromIndex:3] : @"N/A");
+	DDLogInfo(@"Load State: %@", loadState.length > 0 ? [loadState substringFromIndex:3] : @"N/A");
 }
 
 - (void) moviePlayerNowPlayingMovieDidChange:(NSNotification *)notification
 {
 	MPMoviePlayerController *moviePlayerController = notification.object;
-	NSLog(@"Now Playing %@", moviePlayerController.contentURL);
-}
-
-- (void) videoPlayerViewControllerDidReceiveVideo:(NSNotification *)notification
-{
-	NSLog(@"Video: %@", notification.userInfo[XCDYouTubeVideoUserInfoKey]);
+	DDLogInfo(@"Now Playing %@", moviePlayerController.contentURL);
 }
 
 @end

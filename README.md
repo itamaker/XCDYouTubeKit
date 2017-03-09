@@ -1,13 +1,13 @@
 ## About
 
-[![Build Status](https://img.shields.io/travis/0xced/XCDYouTubeKit/master.svg?style=flat)](https://travis-ci.org/0xced/XCDYouTubeKit)
-[![Coverage Status](https://img.shields.io/coveralls/0xced/XCDYouTubeKit/master.svg?style=flat)](https://coveralls.io/r/0xced/XCDYouTubeKit?branch=master)
+[![Build Status](https://img.shields.io/circleci/project/0xced/XCDYouTubeKit/master.svg?style=flat)](https://circleci.com/gh/0xced/XCDYouTubeKit)
+[![Coverage Status](https://img.shields.io/codecov/c/github/0xced/XCDYouTubeKit/master.svg?style=flat)](https://codecov.io/gh/0xced/XCDYouTubeKit/branch.master)
 [![Platform](https://img.shields.io/cocoapods/p/XCDYouTubeKit.svg?style=flat)](http://cocoadocs.org/docsets/XCDYouTubeKit/)
-[![Pod Version](https://img.shields.io/cocoapods/v/XCDYouTubeKit.svg?style=flat)](http://cocoadocs.org/docsets/XCDYouTubeKit/)
-[![Carthage Compatibility](https://img.shields.io/badge/carthage-✓-f2a77e.svg?style=flat)](https://github.com/Carthage/Carthage/)
+[![Pod Version](https://img.shields.io/cocoapods/v/XCDYouTubeKit.svg?style=flat)](https://cocoapods.org/pods/XCDYouTubeKit)
+[![Carthage Compatibility](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage/)
 [![License](https://img.shields.io/cocoapods/l/XCDYouTubeKit.svg?style=flat)](LICENSE)
 
-**XCDYouTubeKit** is a YouTube video player for iOS and OS X.
+**XCDYouTubeKit** is a YouTube video player for iOS, tvOS and macOS.
 
 <img src="Screenshots/XCDYouTubeVideoPlayerViewController.png" width="480" height="320">
 
@@ -17,8 +17,9 @@ Are you enjoying XCDYouTubeKit? You can say thank you with [a tweet](https://twi
 
 ## Requirements
 
-- Runs on iOS 5.0 and later
-- Runs on OS X 10.7 and later
+- Runs on iOS 8.0 and later
+- Runs on macOS 10.9 and later
+- Runs on tvOS 9.0 and later
 
 ## Warning
 
@@ -29,16 +30,18 @@ XCDYouTubeKit is against the YouTube [Terms of Service](https://www.youtube.com/
 XCDYouTubeKit is available through CocoaPods and Carthage.
 
 CocoaPods:
+
 ```ruby
-pod "XCDYouTubeKit", "~> 2.1.3"
+pod "XCDYouTubeKit", "~> 2.5"
 ```
 
 Carthage:
+
 ```objc
-github "0xced/XCDYouTubeKit" ~> 2.1.3
+github "0xced/XCDYouTubeKit" ~> 2.5
 ```
 
-Alternatively, you can manually use the provided static library on iOS or dynamic framework on OS X. In order to use the iOS static library, you must:
+Alternatively, you can manually use the provided static library or dynamic framework. In order to use the static library, you must:
 
 1. Create a workspace (File → New → Workspace…)
 2. Add your project to the workspace
@@ -47,23 +50,49 @@ Alternatively, you can manually use the provided static library on iOS or dynami
 
 These steps will ensure that `#import <XCDYouTubeKit/XCDYouTubeKit.h>` will work properly in your project.
 
-**Warning**: If you use the iOS static library and you are targeting iOS 7, add the JavaScriptCore framework. If you are targeting iOS 5 or 6, you must add the following *Other Linker Flags* instead to your app:
-
-```
--Wl,-U,_JSContextGetGlobalObject -Wl,-U,_JSEvaluateScript -Wl,-U,_JSGlobalContextCreate -Wl,-U,_JSGlobalContextRelease -Wl,-U,_JSObjectCallAsFunction -Wl,-U,_JSObjectIsFunction -Wl,-U,_JSObjectMake -Wl,-U,_JSObjectSetProperty -Wl,-U,_JSStringCopyCFString -Wl,-U,_JSStringCreateWithCFString -Wl,-U,_JSStringRelease -Wl,-U,_JSValueIsObject -Wl,-U,_JSValueIsString -Wl,-U,_JSValueMakeString -Wl,-U,_JSValueToStringCopy
-```
-
-See my [JavaScriptCore framework availability on iOS](http://stackoverflow.com/questions/23514579/javascriptcore-framework-availability-on-ios/23514580#23514580) answer on Stack Overflow for a complete explanation.
-
-
 ## Usage
 
 XCDYouTubeKit is [fully documented](http://cocoadocs.org/docsets/XCDYouTubeKit/).
 
-### iOS and OS X
+### iOS only
+
+On iOS, you can use the class `XCDYouTubeVideoPlayerViewController` the same way you use a `MPMoviePlayerViewController`, except you initialize it with a YouTube video identifier instead of a content URL.
+
+#### Present the video in full-screen
 
 ```objc
-NSString *videoIdentifier = @"EdeVaT-zZt4"; // A 11 characters YouTube video identifier
+- (void) playVideo
+{
+	XCDYouTubeVideoPlayerViewController *videoPlayerViewController = [[XCDYouTubeVideoPlayerViewController alloc] initWithVideoIdentifier:@"9bZkp7q19f0"];
+	[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(moviePlayerPlaybackDidFinish:) name:MPMoviePlayerPlaybackDidFinishNotification object:videoPlayerViewController.moviePlayer];
+	[self presentMoviePlayerViewControllerAnimated:videoPlayerViewController];
+}
+
+- (void) moviePlayerPlaybackDidFinish:(NSNotification *)notification
+{
+	[[NSNotificationCenter defaultCenter] removeObserver:self name:MPMoviePlayerPlaybackDidFinishNotification object:notification.object];
+	MPMovieFinishReason finishReason = [notification.userInfo[MPMoviePlayerPlaybackDidFinishReasonUserInfoKey] integerValue];
+	if (finishReason == MPMovieFinishReasonPlaybackError)
+	{
+		NSError *error = notification.userInfo[XCDMoviePlayerPlaybackDidFinishErrorUserInfoKey];
+		// Handle error
+	}
+}
+
+```
+
+#### Present the video in a non full-screen view
+
+```objc
+XCDYouTubeVideoPlayerViewController *videoPlayerViewController = [[XCDYouTubeVideoPlayerViewController alloc] initWithVideoIdentifier:@"9bZkp7q19f0"];
+[videoPlayerViewController presentInView:self.videoContainerView];
+[videoPlayerViewController.moviePlayer play];
+```
+
+### iOS, tvOS and macOS
+
+```objc
+NSString *videoIdentifier = @"9bZkp7q19f0"; // A 11 characters YouTube video identifier
 [[XCDYouTubeClient defaultClient] getVideoWithIdentifier:videoIdentifier completionHandler:^(XCDYouTubeVideo *video, NSError *error) {
 	if (video)
 	{
@@ -76,26 +105,13 @@ NSString *videoIdentifier = @"EdeVaT-zZt4"; // A 11 characters YouTube video ide
 }];
 ```
 
-### iOS only
-
-On iOS, you can use the class `XCDYouTubeVideoPlayerViewController` the same way you use a `MPMoviePlayerViewController`, except you initialize it with a YouTube video identifier instead of a content URL.
-
-#### Present the video in full-screen
-
-```objc
-XCDYouTubeVideoPlayerViewController *videoPlayerViewController = [[XCDYouTubeVideoPlayerViewController alloc] initWithVideoIdentifier:@"9bZkp7q19f0"];
-[self presentMoviePlayerViewControllerAnimated:videoPlayerViewController];
-```
-
-#### Present the video in a non full-screen view
-
-```objc
-XCDYouTubeVideoPlayerViewController *videoPlayerViewController = [[XCDYouTubeVideoPlayerViewController alloc] initWithVideoIdentifier:@"9bZkp7q19f0"];
-[videoPlayerViewController presentInView:self.videoContainerView];
-[videoPlayerViewController.moviePlayer play];
-```
-
 See the demo project for more sample code.
+
+## Logging
+
+Since version 2.2.0, XCDYouTubeKit produces logs. XCDYouTubeKit supports [CocoaLumberjack](https://github.com/CocoaLumberjack/CocoaLumberjack) but does not require it.
+
+See the `XCDYouTubeLogger` class [documentation](http://cocoadocs.org/docsets/XCDYouTubeKit/) for more information.
 
 ## Credits
 

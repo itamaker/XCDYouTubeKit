@@ -1,8 +1,14 @@
 //
-//  Copyright (c) 2013-2014 Cédric Luthi. All rights reserved.
+//  Copyright (c) 2013-2016 Cédric Luthi. All rights reserved.
 //
 
 #import "AppDelegate.h"
+
+@import AVFoundation;
+#import <XCDLumberjackNSLogger/XCDLumberjackNSLogger.h>
+#import <XCDYouTubeKit/XCDYouTubeKit.h>
+
+#import "ContextLogFormatter.h"
 
 @implementation AppDelegate
 
@@ -19,10 +25,34 @@
 	return self;
 }
 
-- (BOOL) application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+static DDLogLevel LogLevelForEnvironmentVariable(NSString *levelEnvironment, DDLogLevel defaultLogLevel)
 {
-	[[NSUserDefaults standardUserDefaults] registerDefaults:@{ @"VideoIdentifier": @"EdeVaT-zZt4" }];
+	NSString *logLevelString = [[[NSProcessInfo processInfo] environment] objectForKey:levelEnvironment];
+	return logLevelString ? strtoul(logLevelString.UTF8String, NULL, 0) : defaultLogLevel;
+}
+
+static void InitializeLoggers(void)
+{
+	DDTTYLogger *ttyLogger = [DDTTYLogger sharedInstance];
+	DDLogLevel defaultLogLevel = LogLevelForEnvironmentVariable(@"DefaultLogLevel", DDLogLevelInfo);
+	DDLogLevel youTubeLogLevel = LogLevelForEnvironmentVariable(@"XCDYouTubeLogLevel", DDLogLevelWarning);
+	ttyLogger.logFormatter = [[ContextLogFormatter alloc] initWithLevels:@{ @(XCDYouTubeKitLumberjackContext) : @(youTubeLogLevel) } defaultLevel:defaultLogLevel];
+	ttyLogger.colorsEnabled = YES;
+	[DDLog addLogger:ttyLogger];
 	
+	NSString *bonjourServiceName = [[NSUserDefaults standardUserDefaults] objectForKey:@"NSLoggerBonjourServiceName"];
+	XCDLumberjackNSLogger *logger = [[XCDLumberjackNSLogger alloc] initWithBonjourServiceName:bonjourServiceName];
+	logger.tags = @{ @0: @"Movie Player", @(XCDYouTubeKitLumberjackContext) : @"XCDYouTubeKit" };
+	[DDLog addLogger:logger];
+}
+
+static void InitializeUserDefaults(void)
+{
+	[[NSUserDefaults standardUserDefaults] registerDefaults:@{ @"VideoIdentifier": @"6v2L2UGZJAM" }];
+}
+
+static void InitializeAudioSession(void)
+{
 	NSString *category = [[NSUserDefaults standardUserDefaults] objectForKey:@"AudioSessionCategory"];
 	if (category)
 	{
@@ -31,13 +61,22 @@
 		if (!success)
 			NSLog(@"Audio Session Category error: %@", error);
 	}
-	
+}
+
+static void InitializeAppearance(UINavigationController *rootViewController)
+{
 	UINavigationBar *navigationBarAppearance = [UINavigationBar appearance];
-	navigationBarAppearance.titleTextAttributes = @{ UITextAttributeFont: [UIFont boldSystemFontOfSize:17] };
-	UINavigationController *navigationController = (UINavigationController *)self.window.rootViewController;
-	UIBarButtonItem *settingsButtonItem = navigationController.topViewController.navigationItem.rightBarButtonItem;
-	[settingsButtonItem setTitleTextAttributes:@{ UITextAttributeFont: [UIFont boldSystemFontOfSize:26] } forState:UIControlStateNormal];
-	
+	navigationBarAppearance.titleTextAttributes = @{ NSFontAttributeName: [UIFont boldSystemFontOfSize:17] };
+	UIBarButtonItem *settingsButtonItem = rootViewController.topViewController.navigationItem.rightBarButtonItem;
+	[settingsButtonItem setTitleTextAttributes:@{ NSFontAttributeName: [UIFont boldSystemFontOfSize:26] } forState:UIControlStateNormal];
+}
+
+- (BOOL) application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+{
+	InitializeLoggers();
+	InitializeUserDefaults();
+	InitializeAudioSession();
+	InitializeAppearance((UINavigationController *)self.window.rootViewController);
 	return YES;
 }
 
